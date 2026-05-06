@@ -516,10 +516,10 @@ Finally, what remaind to be done to use the filter in our projection process is 
 Here’s a images of the results after implementing the Kalman filter. On the right you can see the original projection, on the left, the results after implementing the tracking system. As seen, it does indeed improve the stabilisation of the projection with some charts, of the obtained results after implementing the Kalman filter. It can be seen that the estimations obtained with the filter are indeed smoother.
 
 ## Figure 30: Number of matches found at each frame.
-![dum](img/image30.png)
+![dum](img/image30.webp)
 
 ## Figure 31: Non filtered (blue -cx and red – cy) and filtered (green – kcx and purple – kcy) center position estimation.
-![dum](img/image31.png)
+![dum](img/image31.webp)
 
 All in all, this has been a fun project to work on, and I hope it inspires you to build something on your own! Feel free to reach me for any doubts you might have!
 
