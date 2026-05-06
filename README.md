@@ -523,5 +523,5 @@ Here’s a images of the results after implementing the Kalman filter. On the ri
 
 All in all, this has been a fun project to work on, and I hope it inspires you to build something on your own! Feel free to reach me for any doubts you might have!
 
-And for god's sake pleas sleep or else you shall fall asleep while the presentation
+And for god's sake please sleep or else you shall fall asleep while the presentation
 Thanks for reading until here, see you next time!
