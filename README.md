@@ -205,7 +205,7 @@ This meant that  we were left with the equation presented in Figure 18.
 # Figure 18: Components of the homography matrix. Source: F. Moreno
 ![dum](img/image18.png)
 
-However, we now want to project points whose z-coordinate is different than 0, which is what will allow us to project 3D models. To do so we should find a way to compute, from what we know, the value of R3. Why? Because once z is different than 0 we can no longer drop R3 from the transformation (see Figure 18) since it is needed to map the z-value of the point we want to project. The problem of extending our transformation from 2D to 3D will be solved then when we find a way to obtain the value of R3 (see Figure 18, again). But, how can we get the value of R3?
+However, we now want to project points whose z-coordinate is different than 0, which is what will allow us to project 3D models. To do so we should find a way to compute, from what we know, the value of R3. Why? Because once z is different than 0 we can no longer drop R3 from the transformation (see Figure 17) since it is needed to map the z-value of the point we want to project. The problem of extending our transformation from 2D to 3D will be solved then when we find a way to obtain the value of R3 (see Figure 18, again). But, how can we get the value of R3?
 
 We have already estimated the homography (H) , so its value is known. Furthermore, either by looking up the camera parameters or with a bit of common sense, we can easily know or make an educated guess of the values of the camera calibration matrix (A). Remember that the camera calibration matrix was:
 
@@ -231,19 +231,41 @@ Now, since the external calibration matrix [R1 R2 R3 t] is an homogeneous transf
 
 Unluckily for us, getting the value of R3 is not as simple as that. Since we obtained G1, G2 and G3 from estimations of A and H there is no guarantee that [R1=G1 R2=G2 R3=G1xG2] will be orthonormal. The problem is then to get a pair of vectors that are close to G1 and G2 (since G1 and G2 are estimates of the real values of R1 and R2) and that are orthonormal. Once this pair of vectors has been found (R1′ and R2′) then it will be true that R3 = R1’xR2′, so finding the value of R3 will be trivial. There are many ways in which we can find such a basis, an I will explain on of them. Its main benefit, from my point of view, is that it does not directly include any angle-related computation and that, once you get the hang of it, it is quite straightforward.
 
-Finally and before diving into the explanation, the fact that the vectors we are looking for have to be close to G1 and G2 and not just any orthonormal basis in the same plane as G1 and G2 is important in understanding why some of the next steps are required. So make sure you understand it before moving on. I will try my best in explaining the process by which we will get this new basis but if don’t succeed in doing so do not hesitate to tell me and I will try to rephrase the explanation and make it clearer. It will be useful to have at hand Figure 24 since it provides visual information that can help in understanding the process. Note that what I am calling G1 and G2 are called R1 and R2 respectively in Figure 24. Let’s go for it!
+Finally and before diving into the explanation, the fact that the vectors we are looking for have to be close to G1 and G2 and not just any orthonormal basis in the same plane as G1 and G2 is important in understanding why some of the next steps are required. So make sure you understand it before moving on. I will try my best in explaining the process by which we will get this new basis but if don’t succeed in doing so do not hesitate to tell me and I will try to rephrase the explanation and make it clearer. It will be useful to have at hand Figure 23 since it provides visual information that can help in understanding the process. Note that what I am calling G1 and G2 are called R1 and R2 respectively in Figure 23. Let’s go for it!
 
-We start with the reasonable assumption that, since G1 and G2 are estimates of the real R1 and R2 (which are orthonormal), the angle between G1 and G2 will be approximately 90 degrees (in the ideal case it will be exactly 90 degrees). Furthermore, the modulus of each of this vectors will be close to 1. From G1 and G2 we can easily compute an orthogonal basis -this meaning that the angle between the basis vectors will exactly be 90 degrees- that will be rotated approximately 45 degrees clockwise with respect to the basis formed by G1 and G2. This basis is the one formed by c=G1+G2 and  d = c x p = (G1+G2) x (G1 x G2) in Figure 24. If the vectors that form this new basis (c,d) are made unit vectors and rotated 45 degrees counterclockwise (note that once the vectors have been transformed into unit vectors – v / ||v|| – rotating the basis is as easy as d’ = c / ||c|| + d / ||d|| and  c’ = c / ||c|| – d / ||d||), guess what? We will have an orthogonal basis which is pretty close to our original basis (G1, G2). If we normalize this rotated basis we will finally get the pair of vectors we were looking for. You can see this whole process on Figure 24.
+We start with the reasonable assumption that, since G1 and G2 are estimates of the real R1 and R2 (which are orthonormal), the angle between G1 and G2 will be approximately 90 degrees (in the ideal case it will be exactly 90 degrees). Furthermore, the modulus of each of this vectors will be close to 1. From G1 and G2 we can easily compute an orthogonal basis -this meaning that the angle between the basis vectors will exactly be 90 degrees- that will be rotated approximately 45 degrees clockwise with respect to the basis formed by G1 and G2. This basis is the one formed by c=G1+G2 and  d = c x p = (G1+G2) x (G1 x G2) in Figure 24. If the vectors that form this new basis (c,d) are made unit vectors and rotated 45 degrees counterclockwise (note that once the vectors have been transformed into unit vectors – v / ||v|| – rotating the basis is as easy as d’ = c / ||c|| + d / ||d|| and  c’ = c / ||c|| – d / ||d||), guess what? We will have an orthogonal basis which is pretty close to our original basis (G1, G2). If we normalize this rotated basis we will finally get the pair of vectors we were looking for. You can see this whole process on Figure 23.
 
 # Figure 23: Normalization of [R1 R2 R3] to guarantee that they are orthonormal. Source: F.Moreno
 ![dum](img/image23.png)
 
-Once this basis (R1′, R2′) has been obtained it is trivial to get the value of R3 as the cross product of R1′ and R2′.  This was tough, but we are all set now to finally obtain the matrix that will allow us to project 3D points into the image. This matrix will be the product of the camera calibration matrix A by [R1′ R2′ R3 t] (where t has been updated as shown in Figure 24). So, finally:
+Once this basis (R1′, R2′) has been obtained it is trivial to get the value of R3 as the cross product of R1′ and R2′.  This was tough, but we are all set now to finally obtain the matrix that will allow us to project 3D points into the image. This matrix will be the product of the camera calibration matrix A by [R1′ R2′ R3 t] (where t has been updated as shown in Figure 23). So, finally:
 3D projection matrix = A · [R1′ R2′ R3 t]
 
 Note that this 3D projection matrix will have to be computed for each new frame. With numpy we can, in a few lines of code, define a function that computes it for us:
 
-_____Code_______""""""""
+          def projection_matrix(camera_parameters, homography):
+          """From the camera calibration matrix and the estimated homographycompute the 3D projection matrix"""
+          # Compute rotation along the x and y axis as well as the translation
+          homography = homography * (-1)
+          rot_and_transl = np.dot(np.linalg.inv(camera_parameters), homography)
+          col_1 = rot_and_transl[:, 0]
+          col_2 = rot_and_transl[:, 1]
+          col_3 = rot_and_transl[:, 2]
+          # normalise vectors
+          l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
+          rot_1 = col_1 / l
+          rot_2 = col_2 / l
+          translation = col_3 / l
+          # compute the orthonormal basis
+          c = rot_1 + rot_2
+          p = np.cross(rot_1, rot_2)
+          d = np.cross(c, p)
+          rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+          rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+          rot_3 = np.cross(rot_1, rot_2)
+          # finally, compute the 3D projection matrix from the model to the current frame
+          projection = np.stack((rot_1, rot_2, rot_3, translation)).T
+          return np.dot(camera_parameters, projection)
 
 Note that the sign of the homography matrix is changed in the first line of the function. I will let you think why this is required.
 
@@ -270,7 +292,28 @@ I downloaded several (low poly) 3D models format from clara.io such as this fox.
 
 The code I used to load the models is based on this OBJFileLoader script that I found on Pygame’s website. I stripped out any references to OpenGL and left only the code that loads the geometry of the model. Once the model is loaded we just have to implement a function that reads this data and projects it on top of the video frame with the projection matrix we obtained in the previous section. To do so we take every point used to define the model and multiply it by the projection matrix. One this has been done, we only have to fill with color the faces of the model. The following function can be used to do so:
 
-_____Code_______""""""""
+    def render(img, obj, projection, model, color=False):
+        vertices = obj.vertices
+        scale_matrix = np.eye(3) * 3
+        h, w = model.shape
+  
+        for face in obj.faces:
+            face_vertices = face[0]
+            points = np.array([vertices[vertex - 1] for vertex in face_vertices])
+            points = np.dot(points, scale_matrix)
+            # render model in the middle of the reference surface. To do so,
+            # model points must be displaced
+            points = np.array([[p[0] + w / 2, p[1] + h / 2, p[2]] for p in points])
+            dst = cv2.perspectiveTransform(points.reshape(-1, 1, 3), projection)
+            imgpts = np.int32(dst)
+            if color is False:
+                cv2.fillConvexPoly(img, imgpts, (137, 27, 211))
+            else:
+                color = hex_to_rgb(face[-1])
+                color = color[::-1] # reverse
+                cv2.fillConvexPoly(img, imgpts, color)
+
+        return img
 
 There are two things to be highlighted from the previous function:
 
