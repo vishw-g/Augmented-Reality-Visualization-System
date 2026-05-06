@@ -98,12 +98,12 @@ Finally, after matches have been found, we should define some criteria to decide
 On a final note and before stepping into the next step of the process I must point out that, since we want a real time application, it would have been better to implement a tracking technique and not just plain recognition. This is due to the fact that object recognition will be performed in each frame independently without taking into account previous frames that could add valuable information about the location of the reference object. Another thing to take into account is that, the easier to found the reference surface the more robust detection will be. In this particular sense, the reference surface I’m using might not be the best option, but it helps to understand the process.
 
 #Homography estimation
-Once we have identified the reference surface in the current frame and have a set of valid matches we can proceed to estimate the homography between both images. As explained before, we want to find the transformation that maps points from the surface plane to the image plane (see Figure 5). This transformation will have to be updated each new frame we process.
+Once we have identified the reference surface in the current frame and have a set of valid matches we can proceed to estimate the homography between both images. As explained before, we want to find the transformation that maps points from the surface plane to the image plane (see Figure 4). This transformation will have to be updated each new frame we process.
 
 # Fgure 4: Homography between a plane and an image. Source: F. Moreno.
 ![dum](img/image4.png)
 
-How can we find such a transformation? Since we have already found a set of matches between both images we can certainly find directly by any of the existing methods (I advance we will be using RANSAC) an homogeneous transformation that performs the mapping, but let’s get some insight into what we are doing here (see Figure 6). You can skip the following part (and continue reading after Figure 10) if desired, since I will only explain the reasoning behind the transformation we are going to estimate.
+How can we find such a transformation? Since we have already found a set of matches between both images we can certainly find directly by any of the existing methods (I advance we will be using RANSAC) an homogeneous transformation that performs the mapping, but let’s get some insight into what we are doing here (see Figure 5). You can skip the following part (and continue reading after Figure 9) if desired, since I will only explain the reasoning behind the transformation we are going to estimate.
 
 What we have is an object (a plane in this case) with known coordinates in the, let’s say, World coordinate system and we take a picture of it with a camera located at a certain position and orientation with respect to the World coordinate system. We will assume the camera works following the pinhole model, which roughly means that the rays passing through a 3D point p and the corresponding 2D point u intersect at c, the camera center. A good resource if you are interested in knowing more about the pinhole model can be found here.
 
@@ -120,17 +120,17 @@ Where the focal length is the distance from the pinhole to the image plane, the 
 # Figure 7: Computation of the projection matrix. Source: F. Moreno.
 ![dum](img/image7.png)
 
-Luckily for us, since the points in the reference surface plane do always have its z coordinate equal to 0 (see Figure 5) we can simplify the transformation that we found above. It can be easily seen that the product of the z coordinate and the third column of the projection matrix will always be 0 so we can drop this column and the z coordinate from the previous equation. By renaming the calibration matrix as A and taking into account that the external calibration matrix is an homogeneous transformation:
+Luckily for us, since the points in the reference surface plane do always have its z coordinate equal to 0 (see Figure 4) we can simplify the transformation that we found above. It can be easily seen that the product of the z coordinate and the third column of the projection matrix will always be 0 so we can drop this column and the z coordinate from the previous equation. By renaming the calibration matrix as A and taking into account that the external calibration matrix is an homogeneous transformation:
 
 # Figure 8: Simplification of the projection matrix. Source: F. Moreno.
 ![dum](img/image8.png)
 
-From Figure 9 we can conclude that the homography between the reference surface and the image plane, which is the matrix we will estimate from the previous matches we found is:
+From Figure 8 we can conclude that the homography between the reference surface and the image plane, which is the matrix we will estimate from the previous matches we found is:
 
 # Figure 9: Homography between the reference surface plane and the target image plane. Source: F. Moreno.
 ![dum](img/image9.png)
 
-There are several methods that allow us to estimate the values of the homography matrix, and you maight be familiar with some of them. The one we will be using is RANdom SAmple Consensus (RANSAC).  RANSAC is an iterative algorithm used for model fitting in the presence of a large number of outliers, and Figure 12 ilustrates the main outline of the process. Since we cannot guarantee that all the matches we have found are actually valid matches we have to consider that there might be some false matches (which will be our outliers) and, hence, we have to use an estimation method that is robust against outliers. Figure 11 illustrates the problems we could have when estimating the homography if we considered that there were no outliers.
+There are several methods that allow us to estimate the values of the homography matrix, and you maight be familiar with some of them. The one we will be using is RANdom SAmple Consensus (RANSAC).  RANSAC is an iterative algorithm used for model fitting in the presence of a large number of outliers, and Figure 11 ilustrates the main outline of the process. Since we cannot guarantee that all the matches we have found are actually valid matches we have to consider that there might be some false matches (which will be our outliers) and, hence, we have to use an estimation method that is robust against outliers. Figure 10 illustrates the problems we could have when estimating the homography if we considered that there were no outliers.
 
 # Figure 10: Homography estimation in the presence of outliers. Source: F. Moreno.
 ![dum](img/image10.png)
@@ -143,17 +143,17 @@ As a demonstration of how RANSAC works and to make things clearer, assume we had
 # Figure 12: Initial set of points. Source: F. Moreno
 ![dum](img/image12.png)
 
-From the general outline presented in Figure 12 we can derive the specific process to fit a line using RANSAC (Figure 14).
+From the general outline presented in Figure 12 we can derive the specific process to fit a line using RANSAC (Figure 13).
 
 # Figure 13: RANSAC algorithm to fit a line to a set of points. Source: F. Moreno.
 ![dum](img/image13.png)
 
-A possible outcome of running the algorithm presented above can be seen in Figure 15. Note that the first 3 steps of the algorithm are only shown for the first iteration (indicated by the bottom right number), and from that on only the scoring step is shown.
+A possible outcome of running the algorithm presented above can be seen in Figure 14. Note that the first 3 steps of the algorithm are only shown for the first iteration (indicated by the bottom right number), and from that on only the scoring step is shown.
 
 # Figure 14: Using RANSAC to fit a line to a set of points. Source: F. Moreno.
 ![dum](img/image14.png)
 
-Now back to our use case, homography estimation. For homography estimation the algorithm is presented in Figure 16. Since it is mainly math, I won’t go into details on why 4 matches are needed or on how to estimate H. However, if you want to know why and how it’s done, this is a good explanation of it.
+Now back to our use case, homography estimation. For homography estimation the algorithm is presented in Figure 15. Since it is mainly math, I won’t go into details on why 4 matches are needed or on how to estimate H. However, if you want to know why and how it’s done, this is a good explanation of it.
 
 # Figure 15: RANSAC for homography estimation. Source: F. Moreno.
 ![dum](img/image15.png)
