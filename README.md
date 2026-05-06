@@ -182,25 +182,29 @@ Before seeing how OpenCV can handle this for us we should  discuss one final asp
 
 I know it has been tough to reach this point, but thankfully there is a reward. In OpenCV estimating the homography with RANSAC is as easy as:
 
-          # assuming matches stores the matches found and 
-          # returned by bf.match(des_model, des_frame)
-          # differenciate between source points and destination points
-          src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
-          dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
-          # compute Homography
-          M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+```python
+# assuming matches stores the matches found and 
+# returned by bf.match(des_model, des_frame)
+# differenciate between source points and destination points
+src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+# compute Homography
+M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+```
 
 Where 5.0 is the threshold distance to determine if a match is consistent with the estimated homography. If after estimating the homography we project the four corners of the reference surface on the target image and connect them with a line we should expect the resulting lines to enclose the reference surface in the target image. We can do this by:
 
-          # Draw a rectangle that marks the found model in the frame
-          h, w = model.shape
-          pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
-          # project corners into frame
-          dst = cv2.perspectiveTransform(pts, M)  
-          # connect them with lines
-          img2 = cv2.polylines(img_rgb, [np.int32(dst)], True, 255, 3, cv2.LINE_AA) 
-          cv2.imshow('frame', cap)
-          cv2.waitKey(0)
+```python
+# Draw a rectangle that marks the found model in the frame
+h, w = model.shape
+pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+# project corners into frame
+dst = cv2.perspectiveTransform(pts, M)  
+# connect them with lines
+img2 = cv2.polylines(img_rgb, [np.int32(dst)], True, 255, 3, cv2.LINE_AA) 
+cv2.imshow('frame', cap)
+cv2.waitKey(0)
+```
 
 which results in:
 
@@ -267,29 +271,31 @@ Once this basis (R1′, R2′) has been obtained it is trivial to get the value 
 
 Note that this 3D projection matrix will have to be computed for each new frame. With numpy we can, in a few lines of code, define a function that computes it for us:
 
-          def projection_matrix(camera_parameters, homography):
-          """From the camera calibration matrix and the estimated homographycompute the 3D projection matrix"""
-          # Compute rotation along the x and y axis as well as the translation
-          homography = homography * (-1)
-          rot_and_transl = np.dot(np.linalg.inv(camera_parameters), homography)
-          col_1 = rot_and_transl[:, 0]
-          col_2 = rot_and_transl[:, 1]
-          col_3 = rot_and_transl[:, 2]
-          # normalise vectors
-          l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
-          rot_1 = col_1 / l
-          rot_2 = col_2 / l
-          translation = col_3 / l
-          # compute the orthonormal basis
-          c = rot_1 + rot_2
-          p = np.cross(rot_1, rot_2)
-          d = np.cross(c, p)
-          rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
-          rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
-          rot_3 = np.cross(rot_1, rot_2)
-          # finally, compute the 3D projection matrix from the model to the current frame
-          projection = np.stack((rot_1, rot_2, rot_3, translation)).T
-          return np.dot(camera_parameters, projection)
+```python
+def projection_matrix(camera_parameters, homography):
+"""From the camera calibration matrix and the estimated homographycompute the 3D projection matrix"""
+# Compute rotation along the x and y axis as well as the translation
+homography = homography * (-1)
+rot_and_transl = np.dot(np.linalg.inv(camera_parameters), homography)
+col_1 = rot_and_transl[:, 0]
+col_2 = rot_and_transl[:, 1]
+col_3 = rot_and_transl[:, 2]
+# normalise vectors
+l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
+rot_1 = col_1 / l
+rot_2 = col_2 / l
+translation = col_3 / l
+# compute the orthonormal basis
+c = rot_1 + rot_2
+p = np.cross(rot_1, rot_2)
+d = np.cross(c, p)
+rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+rot_3 = np.cross(rot_1, rot_2)
+# finally, compute the 3D projection matrix from the model to the current frame
+projection = np.stack((rot_1, rot_2, rot_3, translation)).T
+return np.dot(camera_parameters, projection)
+```
 
 Note that the sign of the homography matrix is changed in the first line of the function. I will let you think why this is required.
 
@@ -321,28 +327,30 @@ I downloaded several (low poly) 3D models format from clara.io such as this fox.
 
 The code I used to load the models is based on this OBJFileLoader script that I found on Pygame’s website. I stripped out any references to OpenGL and left only the code that loads the geometry of the model. Once the model is loaded we just have to implement a function that reads this data and projects it on top of the video frame with the projection matrix we obtained in the previous section. To do so we take every point used to define the model and multiply it by the projection matrix. One this has been done, we only have to fill with color the faces of the model. The following function can be used to do so:
 
-    def render(img, obj, projection, model, color=False):
-        vertices = obj.vertices
-        scale_matrix = np.eye(3) * 3
-        h, w = model.shape
+```python
+def render(img, obj, projection, model, color=False):
+    vertices = obj.vertices
+    scale_matrix = np.eye(3) * 3
+    h, w = model.shape
   
-        for face in obj.faces:
-            face_vertices = face[0]
-            points = np.array([vertices[vertex - 1] for vertex in face_vertices])
-            points = np.dot(points, scale_matrix)
-            # render model in the middle of the reference surface. To do so,
-            # model points must be displaced
-            points = np.array([[p[0] + w / 2, p[1] + h / 2, p[2]] for p in points])
-            dst = cv2.perspectiveTransform(points.reshape(-1, 1, 3), projection)
-            imgpts = np.int32(dst)
-            if color is False:
-                cv2.fillConvexPoly(img, imgpts, (137, 27, 211))
-            else:
-                color = hex_to_rgb(face[-1])
-                color = color[::-1] # reverse
-                cv2.fillConvexPoly(img, imgpts, color)
+    for face in obj.faces:
+        face_vertices = face[0]
+        points = np.array([vertices[vertex - 1] for vertex in face_vertices])
+        points = np.dot(points, scale_matrix)
+        # render model in the middle of the reference surface. To do so,
+        # model points must be displaced
+        points = np.array([[p[0] + w / 2, p[1] + h / 2, p[2]] for p in points])
+        dst = cv2.perspectiveTransform(points.reshape(-1, 1, 3), projection)
+        imgpts = np.int32(dst)
+        if color is False:
+            cv2.fillConvexPoly(img, imgpts, (137, 27, 211))
+        else:
+            color = hex_to_rgb(face[-1])
+            color = color[::-1] # reverse
+            cv2.fillConvexPoly(img, imgpts, color)
 
-        return img
+    return img
+```
 
 There are two things to be highlighted from the previous function:
 
@@ -421,35 +429,39 @@ v_p(t+1) = v_p(t)
 
 Taking this into account it is easy to build the complete system model matrix A:
 
-          [[1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+```python
+[[1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+```
 
 Next on the list, the measurements vector, z. This vector contains the measurements of the system that that give us some ground truth to correct the estimations on each iteration. In this case, what we can easily measure on each frame are the positions of the four corners of the reference surface. We will then have an 8×1 meaurements vector that will contain the x & y coordinates of each corner.
 
 Last but not least, the final piece of the puzzle is to define the measurement model matrix, H. This matrix should map the state vector x into the measurements vector z so that we can compare them and see how different the estimations are from our measurements. In our case, this can be done with the following simple matrix:
 
-          [[1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-           [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]]
+```python
+[[1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]]
+```
 
 This are the main pieces we need to implement the Kalman filter that we will use as our tracking algorithm.
 
@@ -464,13 +476,15 @@ With respect to R, on some cases when we get the measurements directly from sens
 
 A part from those considerations, some trial and error always helps in determining which values of Q and R result in a good filter performance. In my case, I have gone with the following definitions for Q and R.
 
-        def get_Q(self, q=0.3, **kwargs):
-            a = np.eye(8)*q**2
-            b = np.zeros([8, 8])
-            return np.block([[b, b], [b, a]])  # 16x16
+```python
+def get_Q(self, q=0.3, **kwargs):
+    a = np.eye(8)*q**2
+    b = np.zeros([8, 8])
+    return np.block([[b, b], [b, a]])  # 16x16
           
-        def get_R(self, r=0.6, **kwargs):
-                return np.eye(8) * r**2  # 8x8
+def get_R(self, r=0.6, **kwargs):
+    return np.eye(8) * r**2  # 8x8
+```
 
 And that’s it! This is all we need to be able to implement the Kalman filter as the tracking algorithm for our reference surface and, hopefully, increase the stability of the model we are projecting in the reference surface.
 
@@ -486,29 +500,31 @@ A prediction step where the state and covariance of the system is estimated from
 Predict state x
 Predict covariance P
 
-        def predict(self, **kwargs):
-            """ Prediction step """
-            self.__update_models_and_noise(**kwargs)
-            self.__project_state()
-            self.__project_covariance()
+```python
+def predict(self, **kwargs):
+    """ Prediction step """
+    self.__update_models_and_noise(**kwargs)
+    self.__project_state()
+    self.__project_covariance()
  
-        def __update_models_and_noise(self, **kwargs):
-            """ If any of the models has to be updated with some data, do it here"""
-            self._A = self.get_A(**kwargs)
-            self._H = self.get_H(**kwargs)
-            self._Q = self.get_Q(**kwargs)
-            self._R = self.get_R(**kwargs)
+def __update_models_and_noise(self, **kwargs):
+    """ If any of the models has to be updated with some data, do it here"""
+    self._A = self.get_A(**kwargs)
+    self._H = self.get_H(**kwargs)
+    self._Q = self.get_Q(**kwargs)
+    self._R = self.get_R(**kwargs)
  
-        def __project_state(self):
-            """ x_k = A*x_(k-1) + B*u_k"""
-            self.x = np.matmul(self._A, self.x)
+def __project_state(self):
+    """ x_k = A*x_(k-1) + B*u_k"""
+    self.x = np.matmul(self._A, self.x)
  
-        def __project_covariance(self):
-            """ P_k = A*P_(k-1)*A' + Q """
-            self.P = np.matmul(
-                np.matmul(self._A, self.P),
-                np.transpose(self._A)
-            ) + self._Q
+def __project_covariance(self):
+    """ P_k = A*P_(k-1)*A' + Q """
+    self.P = np.matmul(
+        np.matmul(self._A, self.P),
+        np.transpose(self._A)
+    ) + self._Q
+```
 
 A correction step where the state of the system is corrected from some measurements. This correction step can be divided into:
 
@@ -516,34 +532,36 @@ A correction step where the state of the system is corrected from some measureme
 2. Correct state x from measurements z and gain K (and measurement model H)
 3. Correct covariance P from gain K (and measurement model H)
 
-        def correct(self, measurements):
-            """ Correction step """
-            self.__compute_gain()
-            self.__correct_state(measurements)
-            self.__correct_covariance()
+```python
+def correct(self, measurements):
+    """ Correction step """
+    self.__compute_gain()
+    self.__correct_state(measurements)
+    self.__correct_covariance()
  
-        def __compute_gain(self):
-            """ K_k = P_k*H'*(H*P_K*H' + R)^-1 """
-            self.K = np.matmul(
-                np.matmul(self.P, np.transpose(self._H)),
-                np.linalg.inv(
-                    np.matmul(
-                        self._H,
-                        np.matmul(self.P, np.transpose(self._H))
-                    ) + self._R
-                )
-            )
+def __compute_gain(self):
+    "" K_k = P_k*H'*(H*P_K*H' + R)^-1 """
+    self.K = np.matmul(
+        np.matmul(self.P, np.transpose(self._H)),
+        np.linalg.inv(
+            np.matmul(
+                self._H,
+                np.matmul(self.P, np.transpose(self._H))
+            ) + self._R
+        )
+    )
  
-        def __correct_state(self, z):
-            """ x_k = x_K + K_k*(z_k - H*x_k) """
-            self.x = self.x + np.matmul(
-                self.K,
-                z - np.matmul(self._H, self.x)
-            )
+def __correct_state(self, z):
+    """ x_k = x_K + K_k*(z_k - H*x_k) """
+    self.x = self.x + np.matmul(
+        self.K,
+        z - np.matmul(self._H, self.x)
+    )
  
-        def __correct_covariance(self):
-            """ P_k = (I - K_k*H)*P_k """
-            self.P = np.matmul(np.eye(16) - np.matmul(self.K, self._H), self.P)
+def __correct_covariance(self):
+    """ P_k = (I - K_k*H)*P_k """
+    self.P = np.matmul(np.eye(16) - np.matmul(self.K, self._H), self.P)
+```
 
 These are the two main steps of the process, you can check the full class implementation in the link at the beginning of the section.
 
