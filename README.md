@@ -14,13 +14,10 @@ Looking at the project as a whole may make it seem more difficult than it really
 
 To achieve this we first have to be able to identify the flat surface of reference in an image or video frame. Once identified, we can easily determine the transformation from the reference surface image (2D) to the target image (2D). This transformation is called homography. However, if what we want is to project a 3D model placed on top of the reference surface to the target image we need to extend the previous transformation to handle cases were the height of the point to project in the reference surface coordinate system is different than zero. This can be achieved with a bit of algebra. Finally, we should apply this transformation to our 3D model and draw it on the screen. Bearing the previous points in mind our project can be divided into:
 
-          1. 🔍 Recognize the reference flat surface.
-
-          2. 📐 Estimate the homography.
-
-          3. 🔄 Derive from the homography the transformation from the reference surface coordinate system to the target image coordinate system.
-
-          4. 🎨 Project our 3D model in the image (pixel space) and draw it.
+1. 🔍 Recognize the reference flat surface.
+2. 📐 Estimate the homography.
+3. 🔄 Derive from the homography the transformation from the reference surface coordinate system to the target image coordinate system.
+4. 🎨 Project our 3D model in the image (pixel space) and draw it.      
 
 ## 📊 Figure 1: Overview of the whole process that brings to life our augmented reality application.
 ![dum](img/image1.png)
