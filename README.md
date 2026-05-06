@@ -37,7 +37,23 @@ Once features have been found we should find a suitable representation of the in
 This is for sure a nice idea, but how can it actually be done? There are many algorithms that extract image features and compute its descriptors and, since I won’t go into much more detail (a whole post could be devoted only to this) if you are interested in knowing more take a look at SIFT, SURF, or Harris. The one we will be using was developed at the OpenCV Lab and it is called ORB (Oriented FAST and Rotated BRIEF). The shape and values of the descriptor depend on the algorithm used and, in our case,  the descriptors obtained will be binary strings.
 
 With OpenCV, extracting features and its descriptors via the ORB detector is as easy as:
-![dum](img/code1.png)
+
+          img = cv2.imread('scene.jpg',0)
+          
+          # Initiate ORB detector
+          orb = cv2.ORB_create()
+          
+          # find the keypoints with ORB
+          kp = orb.detect(img, None)
+          
+          # compute the descriptors with ORB
+          kp, des = orb.compute(img, kp)
+          
+          # draw only keypoints location,not size and orientation
+          img2 = cv2.drawKeypoints(img, kp, img, color=(0,255,0), flags=0)
+          cv2.imshow('keypoints',img2)
+          cv2.waitKey(0)
+
 
 # Feature matching
 Once we have found the features of both the object and the scene were the object is to be found and computed its descriptors it is time to look for matches between them. The simplest way of doing this is to take the descriptor of each feature in the first set, compute the distance to all the descriptors in the second set and return the closest one as the best match (I should state here that it is important to choose a way of measuring distances suitable with the descriptors being used. Since our descriptors will be binary strings we will use Hamming distance). This is a brute force approach, and more sophisticated methods exist.
@@ -52,7 +68,32 @@ Another option to reduce the number of false positives would be to check if the 
 Finally, after matches have been found, we should define some criteria to decide if the object has been found or not. For this I defined a threshold on the minimum number of matches that should be found. If the number of matches is above the threshold, then we assume the object has been found. Otherwise we consider that there isn’t enough evidence to say that the recognition was successful.
 
 # With OpenCV all this recognition process can be done in a few lines of code:
-![dum](img/code2.png)
+          MIN_MATCHES = 15
+          cap = cv2.imread('scene.jpg', 0)    
+          model = cv2.imread('model.jpg', 0)
+          # ORB keypoint detector
+          orb = cv2.ORB_create()              
+          # create brute force  matcher object
+          bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)  
+          # Compute model keypoints and its descriptors
+          kp_model, des_model = orb.detectAndCompute(model, None)  
+          # Compute scene keypoints and its descriptors
+          kp_frame, des_frame = orb.detectAndCompute(cap, None)
+          # Match frame descriptors with model descriptors
+          matches = bf.match(des_model, des_frame)
+          # Sort them in the order of their distance
+          matches = sorted(matches, key=lambda x: x.distance)
+          
+          if len(matches) > MIN_MATCHES:
+              # draw first 15 matches.
+              cap = cv2.drawMatches(model, kp_model, cap, kp_frame,
+                                     matches[:MIN_MATCHES], 0, flags=2)
+              # show result
+              cv2.imshow('frame', cap)
+              cv2.waitKey(0)
+          else:
+              print "Not enough matches have been found - %d/%d" % (len(matches),MIN_MATCHES)
+
 
 On a final note and before stepping into the next step of the process I must point out that, since we want a real time application, it would have been better to implement a tracking technique and not just plain recognition. This is due to the fact that object recognition will be performed in each frame independently without taking into account previous frames that could add valuable information about the location of the reference object. Another thing to take into account is that, the easier to found the reference surface the more robust detection will be. In this particular sense, the reference surface I’m using might not be the best option, but it helps to understand the process.
 
@@ -121,11 +162,25 @@ Before seeing how OpenCV can handle this for us we should  discuss one final asp
 
 I know it has been tough to reach this point, but thankfully there is a reward. In OpenCV estimating the homography with RANSAC is as easy as:
 
-![dum](img/code3.png)
+          # assuming matches stores the matches found and 
+          # returned by bf.match(des_model, des_frame)
+          # differenciate between source points and destination points
+          src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+          dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+          # compute Homography
+          M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
 Where 5.0 is the threshold distance to determine if a match is consistent with the estimated homography. If after estimating the homography we project the four corners of the reference surface on the target image and connect them with a line we should expect the resulting lines to enclose the reference surface in the target image. We can do this by:
 
-![dum](img/code4.png)
+          # Draw a rectangle that marks the found model in the frame
+          h, w = model.shape
+          pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+          # project corners into frame
+          dst = cv2.perspectiveTransform(pts, M)  
+          # connect them with lines
+          img2 = cv2.polylines(img_rgb, [np.int32(dst)], True, 255, 3, cv2.LINE_AA) 
+          cv2.imshow('frame', cap)
+          cv2.waitKey(0)
 
 which results in:
 
