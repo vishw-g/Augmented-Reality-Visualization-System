@@ -63,6 +63,7 @@ With OpenCV, extracting features and its descriptors via the ORB detector is as 
           img2 = cv2.drawKeypoints(img, kp, img, color=(0,255,0), flags=0)
           cv2.imshow('keypoints',img2)
           cv2.waitKey(0)
+```
 🔗 Feature matching
 Once we have found the features of both the object and the scene were the object is to be found and computed its descriptors it is time to look for matches between them. The simplest way of doing this is to take the descriptor of each feature in the first set, compute the distance to all the descriptors in the second set and return the closest one as the best match (I should state here that it is important to choose a way of measuring distances suitable with the descriptors being used. Since our descriptors will be binary strings we will use Hamming distance). This is a brute force approach, and more sophisticated methods exist.
 
