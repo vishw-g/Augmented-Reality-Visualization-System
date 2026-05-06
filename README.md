@@ -4,6 +4,11 @@ You may (or may not) have heard of or seen the augmented reality Invizimals vide
 
 ---
 
+# 💻 Tech Stack:
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+
+---
+
 # 🧭 Where do we start?
 Looking at the project as a whole may make it seem more difficult than it really is. Luckily for us, we will be able to divide it into smaller parts that, when combined one on top of another, will allow us to have our augmented reality application working. The question now is, which are these smaller chunks that we need? 
 
