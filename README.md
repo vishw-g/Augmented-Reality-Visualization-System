@@ -15,7 +15,7 @@ To achieve this we first have to be able to identify the flat surface of referen
 
           4.  Project our 3D model in the image (pixel space) and draw it.
 
-# Figure 1: Overview of the whole process that brings to life our augmented reality application.
+## Figure 1: Overview of the whole process that brings to life our augmented reality application.
 ![dum](img/image1.png)
 
 The main tools we will use are Python and OpenCV because they are both open source, easy to set up and use and it is fast to build prototypes with them. For the needed algebra bit I will be using numpy.
@@ -28,7 +28,7 @@ Roughly speaking, this step consists in first looking in both the reference and 
 
 For a region or point of an image to be labeled as feature it should fulfill two important properties: first of all, it should present some uniqueness at least locally. Good examples of this could be corners or edges. Secondly, since we don’t know beforehand which will be, for example, the orientation, scale or brightness conditions of this same object in the image where we want to recognize it a feature should, ideally, be invariant to transformations; i.e, invariant against scale, rotation or brightness changes. As a rule of thumb, the more invariant the better.
 
-# Figure 2: On the left, features extracted from the model of the surface I will be using. On the right, features extracted from a sample scene. Note how corners have been detected as interest points in the rightmost image.
+## Figure 2: On the left, features extracted from the model of the surface I will be using. On the right, features extracted from a sample scene. Note how corners have been detected as interest points in the rightmost image.
 ![dum](img/image2.png)
 
 # Feature description
@@ -62,7 +62,7 @@ For example, and this is what we will be also using, we could check that the mat
 
 Another option to reduce the number of false positives would be to check if the distance to the second to best match is below a certain threshold.  If it is, then the match is considered valid.
 
-# Figure 3: Closest 15 brute force matches found between the reference surface and the scene
+## Figure 3: Closest 15 brute force matches found between the reference surface and the scene
 ![dum](img/image3.png)
 
 Finally, after matches have been found, we should define some criteria to decide if the object has been found or not. For this I defined a threshold on the minimum number of matches that should be found. If the number of matches is above the threshold, then we assume the object has been found. Otherwise we consider that there isn’t enough evidence to say that the recognition was successful.
@@ -100,62 +100,62 @@ On a final note and before stepping into the next step of the process I must poi
 #Homography estimation
 Once we have identified the reference surface in the current frame and have a set of valid matches we can proceed to estimate the homography between both images. As explained before, we want to find the transformation that maps points from the surface plane to the image plane (see Figure 4). This transformation will have to be updated each new frame we process.
 
-# Fgure 4: Homography between a plane and an image. Source: F. Moreno.
+## Fgure 4: Homography between a plane and an image. Source: F. Moreno.
 ![dum](img/image4.png)
 
 How can we find such a transformation? Since we have already found a set of matches between both images we can certainly find directly by any of the existing methods (I advance we will be using RANSAC) an homogeneous transformation that performs the mapping, but let’s get some insight into what we are doing here (see Figure 5). You can skip the following part (and continue reading after Figure 9) if desired, since I will only explain the reasoning behind the transformation we are going to estimate.
 
 What we have is an object (a plane in this case) with known coordinates in the, let’s say, World coordinate system and we take a picture of it with a camera located at a certain position and orientation with respect to the World coordinate system. We will assume the camera works following the pinhole model, which roughly means that the rays passing through a 3D point p and the corresponding 2D point u intersect at c, the camera center. A good resource if you are interested in knowing more about the pinhole model can be found here.
 
-# Figure 5: Image formation assuming a camera pinhole model.  Source: F. Moreno.
+## Figure 5: Image formation assuming a camera pinhole model.  Source: F. Moreno.
 ![dum](img/image5.png)
 
 Although not entirely true, the pinhole model assumption eases our calculations and works well enough for our purposes. The u, v coordinates (coordinates in the image plane) of a point p expressed in the Camera coordinate system if we assume a pinhole camera can be computed as (the derivation of the equation is left as an exercise to the reader):
 
-# Figure 6: Image formation assuming a pinhole camera model. Source: F. Moreno.
+## Figure 6: Image formation assuming a pinhole camera model. Source: F. Moreno.
 ![dum](img/image6.png)
 
 Where the focal length is the distance from the pinhole to the image plane, the projection of the optical center is the position of the optical center in the image plane and k is a scaling factor. The previous equation then tells us how the image is formed. However, as stated before, we know the coordinates of the point p in the World coordinate system and not in the Camera coordinate system, so we have to add another transformation that maps points from the World coordinate system to the Camera coordinate system. The transformation that tells us the coordinates in the image plane of a point p in the World coordinate system is then:
 
-# Figure 7: Computation of the projection matrix. Source: F. Moreno.
+## Figure 7: Computation of the projection matrix. Source: F. Moreno.
 ![dum](img/image7.png)
 
 Luckily for us, since the points in the reference surface plane do always have its z coordinate equal to 0 (see Figure 4) we can simplify the transformation that we found above. It can be easily seen that the product of the z coordinate and the third column of the projection matrix will always be 0 so we can drop this column and the z coordinate from the previous equation. By renaming the calibration matrix as A and taking into account that the external calibration matrix is an homogeneous transformation:
 
-# Figure 8: Simplification of the projection matrix. Source: F. Moreno.
+## Figure 8: Simplification of the projection matrix. Source: F. Moreno.
 ![dum](img/image8.png)
 
 From Figure 8 we can conclude that the homography between the reference surface and the image plane, which is the matrix we will estimate from the previous matches we found is:
 
-# Figure 9: Homography between the reference surface plane and the target image plane. Source: F. Moreno.
+## Figure 9: Homography between the reference surface plane and the target image plane. Source: F. Moreno.
 ![dum](img/image9.png)
 
 There are several methods that allow us to estimate the values of the homography matrix, and you maight be familiar with some of them. The one we will be using is RANdom SAmple Consensus (RANSAC).  RANSAC is an iterative algorithm used for model fitting in the presence of a large number of outliers, and Figure 11 ilustrates the main outline of the process. Since we cannot guarantee that all the matches we have found are actually valid matches we have to consider that there might be some false matches (which will be our outliers) and, hence, we have to use an estimation method that is robust against outliers. Figure 10 illustrates the problems we could have when estimating the homography if we considered that there were no outliers.
 
-# Figure 10: Homography estimation in the presence of outliers. Source: F. Moreno.
+## Figure 10: Homography estimation in the presence of outliers. Source: F. Moreno.
 ![dum](img/image10.png)
 
-# Figure 11: RANSAC algorithm outline. Source: F. Moreno.
+## Figure 11: RANSAC algorithm outline. Source: F. Moreno.
 ![dum](img/image11.png)
 
 As a demonstration of how RANSAC works and to make things clearer, assume we had the following set of points for which we wanted to fit a line using RANSAC:
 
-# Figure 12: Initial set of points. Source: F. Moreno
+## Figure 12: Initial set of points. Source: F. Moreno
 ![dum](img/image12.png)
 
 From the general outline presented in Figure 12 we can derive the specific process to fit a line using RANSAC (Figure 13).
 
-# Figure 13: RANSAC algorithm to fit a line to a set of points. Source: F. Moreno.
+## Figure 13: RANSAC algorithm to fit a line to a set of points. Source: F. Moreno.
 ![dum](img/image13.png)
 
 A possible outcome of running the algorithm presented above can be seen in Figure 14. Note that the first 3 steps of the algorithm are only shown for the first iteration (indicated by the bottom right number), and from that on only the scoring step is shown.
 
-# Figure 14: Using RANSAC to fit a line to a set of points. Source: F. Moreno.
+## Figure 14: Using RANSAC to fit a line to a set of points. Source: F. Moreno.
 ![dum](img/image14.png)
 
 Now back to our use case, homography estimation. For homography estimation the algorithm is presented in Figure 15. Since it is mainly math, I won’t go into details on why 4 matches are needed or on how to estimate H. However, if you want to know why and how it’s done, this is a good explanation of it.
 
-# Figure 15: RANSAC for homography estimation. Source: F. Moreno.
+## Figure 15: RANSAC for homography estimation. Source: F. Moreno.
 ![dum](img/image15.png)
 
 Before seeing how OpenCV can handle this for us we should  discuss one final aspect of the algorithm, which is what does it mean that a match is consistent with H. What this mainly means is that if after estimating an homography we project into the target image the matches that were not used to estimate it then the projected points from the reference surface should be close to its matches in the target image. How close they should be to be considered consistent is up to you.
@@ -184,7 +184,7 @@ Where 5.0 is the threshold distance to determine if a match is consistent with t
 
 which results in:
 
-# Figure 16: Projected corners of the reference surface with the estimated homography.
+## Figure 16: Projected corners of the reference surface with the estimated homography.
 ![dum](img/image16.png)
 
 I think this is enough for today. On the next post we will see how to extend the homography we already estimated to project not only points in the reference surface plane but any 3D point from the reference surface coordinate system to the target image. We will then use this method to compute in real time, for each video frame, the specific projection matrix and then project in a video stream a 3D model of our choice from an .obj file. now go and sleep.
@@ -197,36 +197,36 @@ What we should achieve to project our 3D models in the frame is, as we have alre
 
 If we go back to the first paragraphs of the section Homography Estimation, on part 1, we reached the conclusion that the 3×3 homography matrix was the product of the camera calibration matrix (A) by the external calibration matrix – which is an homogeneous transformation-. We dropped the third column (R3) of the homogeneous transformation because the z-coordinate of all the points we wanted to map was 0 (since all of them were contained in the reference surface plane). Figure 18 shows again the last steps of how we obtained the final expression of the homography matrix.
 
-# Figure 17: Derivation of the homography matrix. Source: F.Moreno
+## Figure 17: Derivation of the homography matrix. Source: F.Moreno
 ![dum](img/image17.png)
 
 This meant that  we were left with the equation presented in Figure 18.
 
-# Figure 18: Components of the homography matrix. Source: F. Moreno
+## Figure 18: Components of the homography matrix. Source: F. Moreno
 ![dum](img/image18.png)
 
 However, we now want to project points whose z-coordinate is different than 0, which is what will allow us to project 3D models. To do so we should find a way to compute, from what we know, the value of R3. Why? Because once z is different than 0 we can no longer drop R3 from the transformation (see Figure 17) since it is needed to map the z-value of the point we want to project. The problem of extending our transformation from 2D to 3D will be solved then when we find a way to obtain the value of R3 (see Figure 18, again). But, how can we get the value of R3?
 
 We have already estimated the homography (H) , so its value is known. Furthermore, either by looking up the camera parameters or with a bit of common sense, we can easily know or make an educated guess of the values of the camera calibration matrix (A). Remember that the camera calibration matrix was:
 
-# Figure 19: Camera calibration matrix. Source: F. Moreno
+## Figure 19: Camera calibration matrix. Source: F. Moreno
 ![dum](img/image19.png)
 
 Here you can find a nice article (part 3 of a recommended series) that talks in detail about the camera calibration matrix and each of its values, and you can even play with them. Since all I am building is a prototype application I just made an educated guess of the values of this matrix. When it comes to the projection of the optical center, I just set u0 and v0 to be half the resolution of the frames I am capturing with OpenCV (u0=320 and v0=240). As for the focal length, this article provides some useful information on how to estimate the focal length of a webcam or a cellphone camera. I set fu and fv to the same value, and found that a focal length of 800 worked quite well for me. You may have to adjust these parameters to your actual set up or even go on calibrating your camera.
 
 Now that we have estimates of both the homography matrix H and our camera calibration matrix A, we can easily recover R1, R2 and t by multiplying the inverse of A by H:
 
-# Figure 20: Recovering the external calibration matrix values from the estimated homography and the camera calibration matrix. Source: F.Moreno
+## Figure 20: Recovering the external calibration matrix values from the estimated homography and the camera calibration matrix. Source: F.Moreno
 ![dum](img/image20.png)
 
 Were the values of G1, G2 and G3 can be regarded as:
 
-# Figure 21: Extracting the values of the external calibration matrix. Source: F.Moreno
+## Figure 21: Extracting the values of the external calibration matrix. Source: F.Moreno
 ![dum](img/image21.png)
 
 Now, since the external calibration matrix [R1 R2 R3 t] is an homogeneous transformation that maps points amongst two different reference frames we can be sure that [R1 R2 R3] have to be orthonormal. Hence, theoretically we can compute R3 as:
 
-# Figure 22: Computation of R3. Source: F. Moreno
+## Figure 22: Computation of R3. Source: F. Moreno
 ![dum](img/image22.png)
 
 Unluckily for us, getting the value of R3 is not as simple as that. Since we obtained G1, G2 and G3 from estimations of A and H there is no guarantee that [R1=G1 R2=G2 R3=G1xG2] will be orthonormal. The problem is then to get a pair of vectors that are close to G1 and G2 (since G1 and G2 are estimates of the real values of R1 and R2) and that are orthonormal. Once this pair of vectors has been found (R1′ and R2′) then it will be true that R3 = R1’xR2′, so finding the value of R3 will be trivial. There are many ways in which we can find such a basis, an I will explain on of them. Its main benefit, from my point of view, is that it does not directly include any angle-related computation and that, once you get the hang of it, it is quite straightforward.
@@ -235,7 +235,7 @@ Finally and before diving into the explanation, the fact that the vectors we are
 
 We start with the reasonable assumption that, since G1 and G2 are estimates of the real R1 and R2 (which are orthonormal), the angle between G1 and G2 will be approximately 90 degrees (in the ideal case it will be exactly 90 degrees). Furthermore, the modulus of each of this vectors will be close to 1. From G1 and G2 we can easily compute an orthogonal basis -this meaning that the angle between the basis vectors will exactly be 90 degrees- that will be rotated approximately 45 degrees clockwise with respect to the basis formed by G1 and G2. This basis is the one formed by c=G1+G2 and  d = c x p = (G1+G2) x (G1 x G2) in Figure 24. If the vectors that form this new basis (c,d) are made unit vectors and rotated 45 degrees counterclockwise (note that once the vectors have been transformed into unit vectors – v / ||v|| – rotating the basis is as easy as d’ = c / ||c|| + d / ||d|| and  c’ = c / ||c|| – d / ||d||), guess what? We will have an orthogonal basis which is pretty close to our original basis (G1, G2). If we normalize this rotated basis we will finally get the pair of vectors we were looking for. You can see this whole process on Figure 23.
 
-# Figure 23: Normalization of [R1 R2 R3] to guarantee that they are orthonormal. Source: F.Moreno
+## Figure 23: Normalization of [R1 R2 R3] to guarantee that they are orthonormal. Source: F.Moreno
 ![dum](img/image23.png)
 
 Once this basis (R1′, R2′) has been obtained it is trivial to get the value of R3 as the cross product of R1′ and R2′.  This was tough, but we are all set now to finally obtain the matrix that will allow us to project 3D points into the image. This matrix will be the product of the camera calibration matrix A by [R1′ R2′ R3 t] (where t has been updated as shown in Figure 23). So, finally:
@@ -277,11 +277,11 @@ As a summary, let me shortly recap our thought process to estimate the 3D matrix
 4. From the estimations of the homography and the camera calibration matrix along with the mathematical model derived in 1, compute the values of G1, G2 and t.
 5. Find an orthonormal basis in the plane (R1′, R2′) that is similar to (G1,G2), compute R3 from it and update the value of t.
 
-# Figure 24: Thought process to recover the 3D projection matrix.
+## Figure 24: Thought process to recover the 3D projection matrix.
 ![dum](img/image24.png)
 
 #Model projection
-# Figure 25: Fox projection.
+## Figure 25: Fox projection.
 ![dum](img/image25.png)
 
 We are now reaching the final stages of the project. We already have all the required tools needed to project our 3D models. The only thing we have to do now is get some 3D figures and project them!
@@ -326,7 +326,7 @@ And that’s all! go to sleep i know you haven't slept for hole night.
 Results
 Here you can find some images that showcase the current results. As always, there are many things that can be improved but overall we got it working quite well.
 
-# Figure 26: Done. Let’s ship the code!
+## Figure 26: Done. Let’s ship the code!
 ![dum](img/image26.png)
 
 specially for Linux users, make sure that your OpenCV installation has been compiled with FFMPEG support. Otherwise, capturing video will fail. Pre-built OpenCV packages such as the ones downloaded via pip are not compiled with FFMPEG support, which means that you will have to build it manually.
@@ -337,18 +337,191 @@ The code might not work directly as-is (you should change the model, tweak some 
 
 If interested, here you can find the third and final part on the series, were we will learn how to smoothen and stabilise the projection:
 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Augmented-Reality-Visualization-System(part 3)
+I know you are not sleeping from 3 days,
+This is the third part of the Augmented Reality application prototype we have been building with Python and Open CVAt the end of part 2 we were able to successfully render a 3D Model on top of a reference surface, which was our main goal.In this post we will improve the algorithm so that the projection is smoother and more stable:
 
+Although we already have in place the building blocks required for the application to work, there is still room for improvement. For example, it is easy to see that the projected model is really shaky. One of the many things we can do to smooth the model movement is to implement a tracking system. Currently, we are running a detection algorithm to find the reference surface at each frame, and the result of this detection is what we are using to project the model in the frame.
 
+## igure 27: Current application flow.
+![dum](img/image27.png)
 
+In the current workflow we are not taking into account the information we already have from previous frames of the estimated position and velocity of the reference surface. Since our current workflow only takes into account the current frame, if our detection algorithm computation is off on one frame we have no means to know it and correct the estimation. We just work with the data from that specific frame. A tracking system will take into account the information obtained from previous frames and combine it with the current detection to obtain a final estimation of the reference surface’s position in the current frame. This will hopefully smooth the projection and make the results more visually appealing.
 
+# Choosing a tracking system
+There are many ways in which a tracking system can be implemented, but I’ve always wanted to give the Kalman Filter a go, and this seemed like a good opportunity. A part from that, if the process and measurement covariances are known, the Kalman filter is the best possible linear estimator when it comes to minimising the mean-square-error.
 
+# Kalman Filter
+I won’t go into the details of how a Kalman filter works, since there are plenty of good resources online. Here, I will limit myself to the problem we are trying to solve and how a Kalman filter can be put to good use. Keeping it simple, what a Kalman Filter basically does is mix data from different sources optimally to produce the best estimation of the desired system variables or states.
 
+## Figure 28: Kalman filter overview. Source: Wikipedia.
+![dum](img/image28.png)
 
+There are several ways in which a Kalman filter can be used in our application (for example we could apply it to the homography matrix). From the many ways in which we can use it, the criteria I used to select the implemented approach is simplicity (not very scientific, I know). With a sample size of one, I reached the conclusion that the easiest and most intuitive approach -although suboptimal due to the number of computations that have to be done more than once- was to track and estimate the position and velocity of the reference surface. More specifically, the position and velocity of each of its corners. As seen on figure 30, this means we will estimate the homography and the projection matrix twice for each frame. This is not very efficient, but from my point of view – and due to the nature of the project- the resulting simplicity pays off.
 
+With that in mind, our modified application flow will now look like the following,
 
+## Figure 29: Modified application flowchart including the Kalman filter to as the tracking system.
+![dum](img/image29.png)
 
+where the green rectangle highlights the new pieces that come into play for the tracking. To be able to implement the Kalman filter we need to define:
 
+1. The state vector (x), which will contain the variables of the system we want to estimate.
+2. The system model (A) used to predict the evolution of the state vector.
+3. The measurements vector (z), which will contain the measurements used to correct the estimation.
+4. The measurement model (H), used to estimate measurement values from the current state.
 
+We have already decided which is going to be our state vector, the position and velocity of each of the 4 corners of the reference surface. This results in a 16×1 state vector, since we have 4 corners and for each corner we want to track x, y, vx and vy.
 
+Our system model is also easy to get. It is the set of equations that we can use to predict the evolution of the state vector. In our case, since we are tracking positions and velocities, these are simple equations of motion. To further simplify the model we will also make the assumption that from frame to frame there are no accelerations. The resulting system model is really simple. The predicted evolution of each of the states will be:
 
+For positions:
 
+p(t+1) = p(t) + v_p(t)*dt
+
+For velocities:
+
+v_p(t+1) = v_p(t)
+
+Taking this into account it is easy to build the complete system model matrix A:
+
+          [[1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 1.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+
+Next on the list, the measurements vector, z. This vector contains the measurements of the system that that give us some ground truth to correct the estimations on each iteration. In this case, what we can easily measure on each frame are the positions of the four corners of the reference surface. We will then have an 8×1 meaurements vector that will contain the x & y coordinates of each corner.
+
+Last but not least, the final piece of the puzzle is to define the measurement model matrix, H. This matrix should map the state vector x into the measurements vector z so that we can compare them and see how different the estimations are from our measurements. In our case, this can be done with the following simple matrix:
+
+          [[1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+           [0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]]
+
+This are the main pieces we need to implement the Kalman filter that we will use as our tracking algorithm.
+
+We also have to define the process and measurement noise covariances, Q and R. We are relaitvely free to choose the values of this matrices as long as they are valid covariance matrices.
+
+With respect to Q, it is useful to understand that:
+
+1. A diagonal matrix means that our state parameters are independent from each other.
+2. The bigger the values of Q with respect to P, the less confidence we have in the model being a good predictor of the process. (Note that Q is used to increase uncertainty when updating P by being added to the result of A·P·A’).
+
+With respect to R, on some cases when we get the measurements directly from sensors it is possible to get the values from the manufacturer, since R depends on sensor sensitivity. If not, we can use the identity matrix multiplied by a scalar that is less than 1.
+
+A part from those considerations, some trial and error always helps in determining which values of Q and R result in a good filter performance. In my case, I have gone with the following definitions for Q and R.
+
+        def get_Q(self, q=0.3, **kwargs):
+            a = np.eye(8)*q**2
+            b = np.zeros([8, 8])
+            return np.block([[b, b], [b, a]])  # 16x16
+          
+        def get_R(self, r=0.6, **kwargs):
+                return np.eye(8) * r**2  # 8x8
+
+And that’s it! This is all we need to be able to implement the Kalman filter as the tracking algorithm for our reference surface and, hopefully, increase the stability of the model we are projecting in the reference surface.
+
+# Implementation
+Note: The full code of the implementation can be found above in this repository
+
+The kalman filter mainly consists in two steps:
+
+A prediction step where the state and covariance of the system is estimated from past data. This prediction step can be divided into:
+
+Predict state x
+Predict covariance P
+
+        def predict(self, **kwargs):
+            """ Prediction step """
+            self.__update_models_and_noise(**kwargs)
+            self.__project_state()
+            self.__project_covariance()
+ 
+        def __update_models_and_noise(self, **kwargs):
+            """ If any of the models has to be updated with some data, do it here"""
+            self._A = self.get_A(**kwargs)
+            self._H = self.get_H(**kwargs)
+            self._Q = self.get_Q(**kwargs)
+            self._R = self.get_R(**kwargs)
+ 
+        def __project_state(self):
+            """ x_k = A*x_(k-1) + B*u_k"""
+            self.x = np.matmul(self._A, self.x)
+ 
+        def __project_covariance(self):
+            """ P_k = A*P_(k-1)*A' + Q """
+            self.P = np.matmul(
+                np.matmul(self._A, self.P),
+                np.transpose(self._A)
+            ) + self._Q
+
+A correction step where the state of the system is corrected from some measurements. This correction step can be divided into:
+
+1. Compute gain K from predicted covariance P, measurement model H and measurement covariance R
+2. Correct state x from measurements z and gain K (and measurement model H)
+3. Correct covariance P from gain K (and measurement model H)
+
+        def correct(self, measurements):
+            """ Correction step """
+            self.__compute_gain()
+            self.__correct_state(measurements)
+            self.__correct_covariance()
+ 
+        def __compute_gain(self):
+            """ K_k = P_k*H'*(H*P_K*H' + R)^-1 """
+            self.K = np.matmul(
+                np.matmul(self.P, np.transpose(self._H)),
+                np.linalg.inv(
+                    np.matmul(
+                        self._H,
+                        np.matmul(self.P, np.transpose(self._H))
+                    ) + self._R
+                )
+            )
+ 
+        def __correct_state(self, z):
+            """ x_k = x_K + K_k*(z_k - H*x_k) """
+            self.x = self.x + np.matmul(
+                self.K,
+                z - np.matmul(self._H, self.x)
+            )
+ 
+        def __correct_covariance(self):
+            """ P_k = (I - K_k*H)*P_k """
+            self.P = np.matmul(np.eye(16) - np.matmul(self.K, self._H), self.P)
+
+These are the two main steps of the process, you can check the full class implementation in the link at the beginning of the section.
+
+Finally, what remaind to be done to use the filter in our projection process is to use the output of the filter estimation to compute the homography matrix, as stated in the diagram shown on Figure 29.
+
+#Results and Analysis
+Here’s a images of the results after implementing the Kalman filter. On the right you can see the original projection, on the left, the results after implementing the tracking system. As seen, it does indeed improve the stabilisation of the projection with some charts, of the obtained results after implementing the Kalman filter. It can be seen that the estimations obtained with the filter are indeed smoother.
+
+## Figure 30: Number of matches found at each frame.
+![dum](img/image30.png)
+
+## Figure 31: Non filtered (blue -cx and red – cy) and filtered (green – kcx and purple – kcy) center position estimation.
+![dum](img/image31.png)
+
+All in all, this has been a fun project to work on, and I hope it inspires you to build something on your own! Feel free to reach me for any doubts you might have!
+
+And for god's sake pleas sleep or else you shall fall asleep while the presentation
+Thanks for reading until here, see you next time!
